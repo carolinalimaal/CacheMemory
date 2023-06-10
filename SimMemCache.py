@@ -1,64 +1,85 @@
-#Definição MP
-num_celulas_mp = 32
-celulas_por_bloco = 2
-mp = ['00000000' for c in range(num_celulas_mp)]
+# Definindo a MP
+numBlocos = 16
+numCelulas = 32
+mp = ['00000000' for _ in range(numCelulas)] 
 
-#Definição Cache
-num_linhas = 4
-blocos_por_linha = 4 
-cache = [[-1, -1] for l in range(num_linhas)] # Dado inválido é -1
+# Definindo a CACHE 
+numLinhas = 4
+numCelulaLinha = 2
+cacheTAG = [[None, None] for _ in range(numLinhas)]
+cacheDADO = [[None, None] for _ in range(numLinhas)]
 
-#Função de escrever na MP
-def write_mp(): 
-    print('='*26)
-    print('  ESCREVENDO DADOS NA MP ')
-    print('='*26)
+#Função para 'quebrar' o endereço 
+def cacheController(endereco):
+    if 0 <= int(endereco, 2) <= numCelulas:
+        bloco = int(endereco[:4], 2)
+        linha = int(endereco[2:4], 2)
+        celula = int(endereco[4:], 2)
+        endereco = int(endereco, 2)
+        return linha, celula, endereco
+    else:
+        print('ENDERECO INVÁLIDO!')
+
+#Função para escrever na MP
+def writeMp():
     while True:
-        address = int(input('ENDEREÇO DE 5 bits: ').zfill(5), 2)
-        if 0 <= address < num_celulas_mp:
-            data = input('INFORMAÇÃO DE 8 bits: ').zfill(8)[:8] #O [:8] serve para deixar o dado com o tamanho de 8bits, retirando, caso ultrapasse, os menos significantes.
-            mp[address] = data 
+        print('='*20)
+        print('  ESCREVENDO NA MP ')
+        print('='*20)
+        endereco = int(input('ENDEREÇO DE 5 bits: ').zfill(5), 2)
+        if 0 <= endereco <= numCelulas:
+            dado = input('DADO DE 8 bits: ').zfill(8)[:8]
+            mp[endereco] = dado
             print()
             opcao = input('Deseja continuar? [S]/[N]: ')
             if opcao in 'Nn':
                 break
         else:
             print('ENDEREÇO INVÁLIDO.')
+    print('='*20)
+    print('    ESTADO DA MP')
+    print('='*20)
+    for _ in range(numCelulas):
+        print(mp[_])
 
-#Função para quebrar o endereço
-def cachecontroller():
-    address = (input('ENDEREÇO DE 5 bits: ').zfill(5))
-    if 0 <= len(address) < num_celulas_mp:
-        linha = int((address[2:4]), 2)
-        celula = int((address[4:]), 2)
-        address = int(address, 2)
-        return linha, celula, address
-    
-#Função de escrever na CACHE
-def write_cache():
-    linha, celula, address = cachecontroller() 
-    cache[linha][celula] = mp[address]
-
-#Função de ler na CACHE
-def read_cache():
-    print('='*26)
-    print('  LEITURA NA CACHE  ')
-    print('='*26)
-    linha, celula, address = cachecontroller()
-    if cache[linha][celula] != -1:
-        print(f'HIT. Conteúdo da célula {bin(address)[2:].zfill(5)} -> {cache[linha][celula]}')
+#Função para escrever na Cache, caso dê 'CACHE MISS'
+def writeCache(linha, celula, endereco):
+    cacheTAG[linha][celula] = endereco
+    cacheDADO[linha][celula] = mp[endereco]
+    if celula == 0: #Condição para levar o bloco todo, verificando se é a célula 0 ou 1
+        cacheTAG[linha][celula+1] = endereco+1
+        cacheDADO[linha][celula+1] = mp[endereco+1]
     else:
-        print('MISS. Bloco não encontrado. Buscando na MP...')
-        write_cache()
-        print(f'Conteúdo da célula {bin(address)[2:].zfill(5)} -> {cache[linha][celula]}')
+        cacheTAG[linha][celula-1] = endereco-1
+        cacheDADO[linha][celula-1] = mp[endereco-1]
 
+#Função para ler na Cache
+def readCache(linha, celula, endereco):
+    if cacheTAG[linha][celula] == endereco:
+        print(f'CACHE HIT. Conteúdo da célula {bin(endereco)[2:].zfill(5)} -> {cacheDADO[linha][celula]}\n')
+    else:
+        print('CACHE MISS. Buscando na MP.....')
+        writeCache(linha, celula, endereco)
+        print(f'Conteúdo da célula {bin(endereco)[2:].zfill(5)} -> {cacheDADO[linha][celula]}\n')
+
+#Função que roda todo o sistema
 def runSimulation():
     while True:
-        read_cache()
+        print('='*20)
+        print('   LENDO NA CACHE   ')
+        print('='*20)
+        endereco = (input('ENDEREÇO DE 5 bits: ').zfill(5))
+        linha, celula, endereco = cacheController(endereco)
+        readCache(linha, celula, endereco)
+        print('='*24)
+        print('     ESTADO DA CACHE')
+        print('='*24)
+        for l in range(numLinhas):
+                print(cacheDADO[l])
+        print()
         opcao = input('Deseja continuar? [S]/[N]: ')
         if opcao in 'Nn':
             break
 
-write_mp() #Primeiramente, para preencher a MP com dados
-runSimulation() #Simulação da interação CACHE-MP
-
+writeMp() #Para preencher a MP
+runSimulation() #Para ler na Cache
